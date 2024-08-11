@@ -1,9 +1,7 @@
 
-#ifndef _GRAPHIC_H_
-#define _GRAPHIC_H_
+#ifndef GRAPHIC_H
+#define GRAPHIC_H
 
-#include <stdio.h>
-#include <stdint.h>
 #include "oled.h"
 
 #define GRAPHIC_HEIGHT_PX OLED_HEIGHT_PX
@@ -23,5 +21,7 @@ typedef struct {
 extern void display(void);
 extern void set_background(uint8_t color);
 extern void set_background_sect(int bnd, uint8_t col_left, uint8_t col_right);
+extern void clear(void);
+extern void circle(point_t* p_center, unsigned int radius, int color_rim, int color_inside);
 
-#endif //_GRAPHIC_H_
+#endif //GRAPHIC_H
