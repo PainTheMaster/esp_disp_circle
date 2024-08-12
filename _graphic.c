@@ -2,6 +2,7 @@
 #include "_graphic.h"
 
 extern uint8_t pix[GRAPHIC_HEIGHT_PX][GRAPHIC_WIDTH_PX];
+uint8_t record[GRAPHIC_HEIGHT_PX][GRAPHIC_WIDTH_PX];
 
 void scoping(const point_t* p_center,
                     unsigned int radius,
@@ -109,7 +110,7 @@ void copy(const point_t* p_center,
                  const point_t* p_right_bottom,
                  int x,
                  int y,
-                 int color){
+                 uint8_t color){
     int vec_x = x - p_center->col;
     int vec_y = y - p_center->row;
     int temp_x, temp_y;
@@ -177,14 +178,15 @@ void hrizontal_scan(const point_t* p_center,
                     const point_t* p_dominant_quad,
                     const point_t* p_start,
                     int y,
-                    int color_rim,
-                    int color_inside){
+                    int16_t color_rim,
+                    int16_t color_inside){
 
     unsigned int status=0;
     const unsigned int radius_sq = radius*radius;
 
     int x, temp_term;
     const int sign_x = p_dominant_quad->col;
+    const int sign_y = p_dominant_quad->row;
 
     if(p_start->col == p_left_top->col){
         temp_term = p_right_bottom->col;
@@ -201,42 +203,116 @@ void hrizontal_scan(const point_t* p_center,
     //処理: フラグが0で範囲内に入ったら円周の色塗りしてフラグ立てる。
     //各色塗るごとにほかの象限にもコピーする。
     //       
-    for(x=p_start->col;
-        terminal*sign_x <= x*sign_x;
-        x -=1*sign_x){
-        //中か外か判定する。
-        if(dist_sq(p_center->col, p_center->row, x, y) <= radius_sq){
-            //commencedのフラグが立っていたらそれは境界
-            if(status & FLAG_CHECK_COMMENCED){
-                if(0 <= color_rim){
-                    pix[y][x] = color_rim;
-                    copy(p_center, p_left_top, p_right_bottom, x, y, color_rim);
-                }
-
-            } else{ //commencedのフラグが立っていなかったら境界なのか内部なのかを判定する。
-                status |= FLAG_CHECK_COMMENCED;
-                int x_outer = x + 1*sign_x;   //一つ外側の座標
-                if(radius_sq < dist_sq(p_center->col, p_center->row, x_outer, y)){  //一つ外側はぎりぎり範囲外なので注目している点は境界
+    if(y==p_left_top->row ||  y==p_right_bottom->row){
+            for(x=p_start->col;
+            terminal*sign_x <= x*sign_x;
+            x -=1*sign_x){
+            //中か外か判定する。
+            if(dist_sq(p_center->col, p_center->row, x, y) <= radius_sq){
+                //commencedのフラグが立っていたらそれは境界
+                if(status & FLAG_CHECK_COMMENCED){
                     if(0 <= color_rim){
                         pix[y][x] = color_rim;
                         copy(p_center, p_left_top, p_right_bottom, x, y, color_rim);
                     }
-                } else {
-                    if(0 <= color_inside){
-                        pix[y][x] = color_inside;
-                        copy(p_center, p_left_top, p_right_bottom, x, y, color_inside);
+                    record[y][x] = FLAG_OPERATION_BOARDER;
+                } else{ //commencedのフラグが立っていなかったら境界なのか内部なのかを判定する。
+                    status |= FLAG_CHECK_COMMENCED;
+                    int x_outer = x + 1*sign_x;   //一つ外側の座標
+                    if(radius_sq < dist_sq(p_center->col, p_center->row, x_outer, y)){  //一つ外側はぎりぎり範囲外なので注目している点は境界
+                        if(0 <= color_rim){
+                            pix[y][x] = color_rim;
+                            copy(p_center, p_left_top, p_right_bottom, x, y, color_rim);
+                        }
+                        record[y][x] = FLAG_OPERATION_BOARDER;
+                    } else {
+                        if(0 <= color_inside){
+                            pix[y][x] = color_inside;
+                            copy(p_center, p_left_top, p_right_bottom, x, y, color_inside);
+                        }
+                        record[y][x] = FLAG_OPERATION_FILL;
                     }
                 }
-            }
-            if(0 <= color_rim){
-                for(x -= 1*sign_x; terminal*sign_x <= x*sign_x; x -= 1*sign_x){
-                    // あとは内部塗りつぶし
-                    pix[y][x] = color_inside;
-                    copy(p_center, p_left_top, p_right_bottom, x, y, color_inside);
+                if(0 <= color_inside){
+                    for(x -= 1*sign_x; terminal*sign_x <= x*sign_x; x -= 1*sign_x){
+                        // あとは内部塗りつぶし
+                        pix[y][x] = color_inside;
+                        record[y][x] = FLAG_OPERATION_FILL;
+                        copy(p_center, p_left_top, p_right_bottom, x, y, color_inside);
+                    }
+                } else {
+                    for(x -= 1*sign_x; terminal*sign_x <= x*sign_x; x -= 1*sign_x){
+                        // あとは内部塗りつぶし（透明だった場合）
+                        record[y][x] = FLAG_OPERATION_FILL;
+                    }
                 }
+            } else {
+                record[y][x] = FLAG_OPERATION_OUT; 
+                status |= FLAG_CHECK_COMMENCED;
             }
         }
-        status |= FLAG_CHECK_COMMENCED;
+    } else {
+        for(x=p_start->col;
+            terminal*sign_x <= x*sign_x;
+            x -=1*sign_x){
+            //中か外か判定する。
+            if(dist_sq(p_center->col, p_center->row, x, y) <= radius_sq){
+                //commencedのフラグが立っていたらそれは境界
+                if(status & FLAG_CHECK_COMMENCED){
+                    if(0 <= color_rim){
+                        pix[y][x] = color_rim;
+                        copy(p_center, p_left_top, p_right_bottom, x, y, color_rim);
+                    }
+                    record[y][x] = FLAG_OPERATION_BOARDER;
+                } else{ //commencedのフラグが立っていなかったら境界なのか内部なのかを判定する。
+                    status |= FLAG_CHECK_COMMENCED;
+                    int x_outer = x + 1*sign_x;   //一つ外側の座標
+                    if(radius_sq < dist_sq(p_center->col, p_center->row, x_outer, y)){  //一つ外側はぎりぎり範囲外なので注目している点は境界
+                        if(0 <= color_rim){
+                            pix[y][x] = color_rim;
+                            copy(p_center, p_left_top, p_right_bottom, x, y, color_rim);
+                        }
+                        record[y][x] = FLAG_OPERATION_BOARDER;
+                    } else {
+                        if(0 <= color_inside){
+                            pix[y][x] = color_inside;
+                            copy(p_center, p_left_top, p_right_bottom, x, y, color_inside);
+                        }
+                        record[y][x] = FLAG_OPERATION_FILL;
+                        if((record[y+1*sign_y][x] & FLAG_OPERATION_OUT) && 0 <= color_rim){
+                            pix[y+1*sign_y][x] = color_rim;
+                            copy(p_center, p_left_top, p_right_bottom, x, y+1*sign_y, color_rim);
+                        }
+                    }
+                }
+                if(0 <= color_inside){
+                    for(x -= 1*sign_x; terminal*sign_x <= x*sign_x; x -= 1*sign_x){
+                        // あとは内部塗りつぶし
+                        pix[y][x] = color_inside;
+                        record[y][x] = FLAG_OPERATION_FILL;
+                        copy(p_center, p_left_top, p_right_bottom, x, y, color_inside);
+                        if(record[y+1*sign_y][x] & FLAG_OPERATION_OUT && 0 <= color_rim){
+                            pix[y+1*sign_y][x] = color_rim;
+                            copy(p_center, p_left_top, p_right_bottom, x, y+1*sign_y, color_rim);
+                        }
+                    }
+                } else {
+                    for(x -= 1*sign_x; terminal*sign_x <= x*sign_x; x -= 1*sign_x){
+                        // あとは内部塗りつぶし
+//                        pix[y][x] = color_inside;
+                        record[y][x] = FLAG_OPERATION_FILL;
+//                        copy(p_center, p_left_top, p_right_bottom, x, y, color_inside);
+                        if(record[y+1*sign_y][x] & FLAG_OPERATION_OUT && 0 <= color_rim){
+                            pix[y+1*sign_y][x] = color_rim;
+                            copy(p_center, p_left_top, p_right_bottom, x, y+1*sign_y, color_rim);
+                        }
+                    }
+                }
+            }else{
+                record[y][x] = FLAG_OPERATION_OUT; 
+                status |= FLAG_CHECK_COMMENCED;
+            }
+        }
     }
 
 }

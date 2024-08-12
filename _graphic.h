@@ -4,7 +4,10 @@
 #include "graphic.h"
 
 #define FLAG_CHECK_COMMENCED (1<<0)
-//#define FLAG_IN (1<<1)
+
+#define FLAG_OPERATION_OUT (1<<0)
+#define FLAG_OPERATION_BOARDER (1<<1)
+#define FLAG_OPERATION_FILL (1<<2)
 
 extern void scoping(const point_t* p_center,
                     unsigned int radius,
@@ -25,7 +28,7 @@ extern void copy(const point_t* p_center,
                  const point_t* p_right_bottom,
                  int x,
                  int y,
-                 int color);
+                 uint8_t color);
 
 extern int is_in_scope(const point_t* p_left_top,
                  const point_t* p_right_bottom,
@@ -47,8 +50,8 @@ extern void hrizontal_scan(const point_t* p_center,
                         const point_t* p_dominant_quad,
                         const point_t* start,
                         int y,
-                        int color_rim,
-                        int color_inside);
+                        int16_t color_rim,
+                        int16_t color_inside);
 
 
 #endif

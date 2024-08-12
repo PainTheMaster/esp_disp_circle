@@ -28,11 +28,11 @@ void app_main(void)
     };
 
     const int radius =10;
-    uint8_t rgb[]={GRAPHIC_RED_256, GRAPHIC_GREEN_256, GRAPHIC_BLUE_256};
-    uint8_t color_rim, color_fill;
+    int16_t rgb[]={GRAPHIC_RED_256, GRAPHIC_GREEN_256, GRAPHIC_BLUE_256, -1};
+    int16_t color_rim, color_fill;
     int color_change = 0;
-    color_rim = rgb[color_change%3];
-    color_fill = rgb[(color_change+1)%3];
+    color_rim = rgb[color_change%4];
+    color_fill = rgb[(color_change+1)%4];
 
     gpio_set_direction(2, GPIO_MODE_OUTPUT);
 
@@ -41,7 +41,7 @@ void app_main(void)
     printf("1st disp ok\n");
     vTaskDelay(pdMS_TO_TICKS(1000));
 
-    int i, vx, vy;
+    int vx, vy;
     const int margin = 10;
     const int leftwall = 0 - margin;
     const int rightwall = GRAPHIC_WIDTH_PX-1+margin;
@@ -51,30 +51,49 @@ void app_main(void)
 
     vx = 1;
     vy = 2;
-    i=0;
-    while(1){
+    
+    while(color_change <= 20){
         clear();
         circle(&center, radius, color_rim, color_fill);
         display();
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(5));
         if(center.col-radius <= leftwall || rightwall <= center.col+radius){
             vx *= -1;
             color_change++;
-            color_rim = rgb[color_change%3];
-            color_fill = rgb[(color_change+1)%3];
+            color_rim = rgb[color_change%4];
+            color_fill = rgb[(color_change+1)%4];
             gpio_set_level(2, color_change%2);
         }
         if(center.row-radius <= upwall || downwall <= center.row+radius){
             vy *= -1;
             color_change++;
-            color_rim = rgb[color_change%3];
-            color_fill = rgb[(color_change+1)%3];
+            color_rim = rgb[color_change%4];
+            color_fill = rgb[(color_change+1)%4];
             gpio_set_level(2, color_change%2);
         }
         center.col += vx;
         center.row += vy;
-        i++;
     //    vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+
+    point_t p1={
+        .row = 0,
+        .col = 0,
+    };
+
+    point_t p2={
+        .row=GRAPHIC_HEIGHT_PX-1,
+        .col=0,
+    };
+
+    int i;
+    for(i=0; i <= GRAPHIC_WIDTH_PX*2; i++){
+        p2.col=i;
+        clear();
+        line(&p1, &p2, rgb[i%4]);
+        display();
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 
 
